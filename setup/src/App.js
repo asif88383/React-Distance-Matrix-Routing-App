@@ -19,6 +19,26 @@ const App = () => {
     }
   }
 
+  const drawRoute = (geoJson, map) => {
+    if(map.getLayer('route')){
+      map.removeLayer('route')
+      map.removeSource('route')
+    }
+    map.addLayer({
+      id: 'route',
+      type: 'line',
+      source: {
+        type: 'geojson',
+        data: geoJson,
+      },
+      paint: {
+        'line-color': 'purple',
+        'line-width': 6,
+        'line-dasharray': [1, 1]
+      }
+    })
+  }
+
   const addDeliveryPoint = (lngLat, map) => {
     const element = document.createElement('div');
     element.className = 'marker-delivery';
@@ -106,13 +126,29 @@ const App = () => {
   }
 
 
-  
+  const recalculateRoutes = () => {
+    sortDestinations(destinations).then((sorted) => {
+      sorted.unshift(origin);
+
+      ttapi.services
+        .calculateRoute({
+          key: process.env.REACT_APP_MAP_KEY,
+          locations: sorted,
+        })
+        .then((routeData) => {
+          const geoJson = routeData.toGeoJson()
+          console.log('geoJson', geoJson);
+          drawRoute(geoJson, map);
+        })
+      })
+    }
 
   
 
   map.on('click', (e) => {
     destinations.push(e.lngLat);
     addDeliveryPoint(e.lngLat, map);
+    recalculateRoutes();
   });
 
   return () => map.remove();
